@@ -91,6 +91,11 @@ namespace Microsoft.AspNet.SignalR.Client
         public event Action Closed;
 
         /// <summary>
+        /// Occurs when the <see cref="Connection"/> has negotiated.
+        /// </summary>
+        public event Action<string> Negotiated;
+
+        /// <summary>
         /// Occurs when the <see cref="Connection"/> starts reconnecting after an error.
         /// </summary>
         public event Action Reconnecting;
@@ -676,6 +681,15 @@ namespace Microsoft.AspNet.SignalR.Client
             if (Error != null)
             {
                 Error(error);
+            }
+        }
+
+        // We pass a string into OnNegotiated so that users can deserialize the raw data into what they want
+        void IConnection.OnNegotiated(string rawSettings)
+        {
+            if (Negotiated != null)
+            {
+                Negotiated(rawSettings);
             }
         }
 
