@@ -553,7 +553,8 @@
                     var res = connection._parseResponse(result),
                         keepAliveData = connection.keepAliveData;
 
-                    $(connection).triggerHandler(events.onNegotiated, res);
+                    // Copy the res settings, this is so users cannot modify the settings
+                    $(connection).triggerHandler(events.onNegotiated, $.extend({}, res));
 
                     connection.appRelativeUrl = res.Url;
                     connection.id = res.ConnectionId;
