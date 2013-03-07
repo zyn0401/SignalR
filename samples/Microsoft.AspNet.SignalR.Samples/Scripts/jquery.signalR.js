@@ -28,6 +28,7 @@
         events = {
             onStart: "onStart",
             onStarting: "onStarting",
+            onNegotiated: "onNegotiated",
             onReceived: "onReceived",
             onError: "onError",
             onConnectionSlow: "onConnectionSlow",
@@ -553,6 +554,8 @@
                     var res = connection._parseResponse(result),
                         keepAliveData = connection.keepAliveData;
 
+                    $(connection).triggerHandler(events.onNegotiated, res);
+
                     connection.appRelativeUrl = res.Url;
                     connection.id = res.ConnectionId;
                     connection.token = res.ConnectionToken;
@@ -631,6 +634,17 @@
             var connection = this;
             $(connection).bind(events.onStarting, function (e, data) {
                 callback.call(connection);
+            });
+            return connection;
+        },
+
+        negotiated: function (callback) {
+            /// <summary>Adds a callback that will be invoked after negotiate has finished and before any data from the result has been read.</summary>
+            /// <param name="callback" type="Function">A callback function to execute after negotiate, the negotiate response is passed in.</param>
+            /// <returns type="signalR" />
+            var connection = this;
+            $(connection).bind(events.onNegotiated, function (e, data) {
+                callback.call(connection, data);
             });
             return connection;
         },
