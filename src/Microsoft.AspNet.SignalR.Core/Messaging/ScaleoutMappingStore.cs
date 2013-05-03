@@ -3,6 +3,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Microsoft.AspNet.SignalR.Messaging
@@ -12,17 +13,22 @@ namespace Microsoft.AspNet.SignalR.Messaging
         private const int MaxMessages = 1000000;
 
         private ScaleoutStore _store;
+        private readonly TraceSource _trace;
+        private readonly string _tracePrefix;
 
-        public ScaleoutMappingStore()
+        public ScaleoutMappingStore(TraceSource trace, string tracePrefix)
         {
-            _store = new ScaleoutStore(MaxMessages);
+            _trace = trace;
+            _tracePrefix = tracePrefix;
+            _store = new ScaleoutStore(MaxMessages, trace, tracePrefix);
         }
+
 
         public void Add(ulong id, ScaleoutMessage message, IDictionary<string, IList<LocalEventKeyInfo>> localKeyInfo)
         {
             if (MaxMapping != null && id < MaxMapping.Id)
             {
-                _store = new ScaleoutStore(MaxMessages);
+                _store = new ScaleoutStore(MaxMessages, _trace, _tracePrefix);
             }
 
             _store.Add(new ScaleoutMapping(id, message, localKeyInfo));
@@ -36,11 +42,11 @@ namespace Microsoft.AspNet.SignalR.Messaging
             }
         }
 
-        public IEnumerator<ScaleoutMapping> GetEnumerator(ulong id)
+        public IEnumerator<ScaleoutMapping> GetEnumerator(ulong id, long timestamp, string connectionId, bool log)
         {
-            MessageStoreResult<ScaleoutMapping> result = _store.GetMessagesByMappingId(id);
+            MessageStoreResult<ScaleoutMapping> result = _store.GetMessagesByMappingId(id, timestamp, connectionId, log);
 
-            return new ScaleoutStoreEnumerator(_store, result);
+            return new ScaleoutStoreEnumerator(_store, result, connectionId, log);
         }
 
         private struct ScaleoutStoreEnumerator : IEnumerator<ScaleoutMapping>, IEnumerator
@@ -51,10 +57,15 @@ namespace Microsoft.AspNet.SignalR.Messaging
             private int _length;
             private ulong _nextId;
 
-            public ScaleoutStoreEnumerator(ScaleoutStore store, MessageStoreResult<ScaleoutMapping> result)
+            private readonly string _connectionId;
+            private readonly bool _log;
+
+            public ScaleoutStoreEnumerator(ScaleoutStore store, MessageStoreResult<ScaleoutMapping> result, string connectionId, bool log)
                 : this()
             {
                 _storeReference = new WeakReference(store);
+                _connectionId = connectionId;
+                _log = log;
                 Initialize(result);
             }
 
@@ -99,7 +110,7 @@ namespace Microsoft.AspNet.SignalR.Messaging
                 }
 
                 // Get the next result
-                MessageStoreResult<ScaleoutMapping> result = store.GetMessages(_nextId);
+                MessageStoreResult<ScaleoutMapping> result = store.GetMessages(_nextId, _connectionId, _log);
                 Initialize(result);
 
                 _offset++;

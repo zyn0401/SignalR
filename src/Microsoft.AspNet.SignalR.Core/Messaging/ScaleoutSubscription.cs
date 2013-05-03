@@ -41,7 +41,7 @@ namespace Microsoft.AspNet.SignalR.Messaging
                 {
                     ScaleoutMapping maxMapping = streams[i].MaxMapping;
 
-                    ulong id = UInt64.MaxValue;
+                    ulong id = 0;
                     string key = i.ToString(CultureInfo.InvariantCulture);
 
                     if (maxMapping != null)
@@ -56,7 +56,7 @@ namespace Microsoft.AspNet.SignalR.Messaging
             }
             else
             {
-                cursors = Cursor.GetCursors(cursor);
+                cursors = GetCursors(cursor);
             }
 
             _cursors = cursors;
@@ -129,7 +129,7 @@ namespace Microsoft.AspNet.SignalR.Messaging
                 Cursor cursor = _cursors[streamIndex];
 
                 // Try to find a local mapping for this payload
-                var enumerator = new CachedStreamEnumerator(store.GetEnumerator(cursor.Id),
+                var enumerator = new CachedStreamEnumerator(store.GetEnumerator(cursor.Id, cursor.Timestamp.Value, Identity, EventKeys.Count > 1),
                                                             streamIndex);
 
                 enumerators.Add(enumerator);
@@ -215,6 +215,23 @@ namespace Microsoft.AspNet.SignalR.Messaging
             }
 
             return mapping.Id;
+        }
+
+        private static List<Cursor> GetCursors(string cursor)
+        {
+            var cursors = Cursor.GetCursors(cursor);
+
+            for (int i = 0; i < cursors.Count; i++)
+            {
+                // We require cursors to have a timestamp, if it doesn't then 
+                // the backplane wasn't implemented correctly
+                if (!cursors[i].Timestamp.HasValue)
+                {
+                    throw new FormatException(Resources.Error_InvalidCursorFormat);
+                }
+            }
+
+            return cursors;
         }
 
         private class CachedStreamEnumerator
