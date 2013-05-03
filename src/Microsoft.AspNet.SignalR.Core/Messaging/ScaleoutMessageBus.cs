@@ -171,7 +171,7 @@ namespace Microsoft.AspNet.SignalR.Messaging
         {
             Counters.ScaleoutMessageBusMessagesReceivedPerSec.IncrementBy(scaleoutMessage.Messages.Count);
 
-            _trace.TraceInformation("OnReceived({0}, {1}, {2})", streamIndex, id, scaleoutMessage.Messages.Count);
+            _trace.TraceInformation("OnReceived({0}, {1}, {2}, {3})", streamIndex, id, scaleoutMessage.Messages.Count, scaleoutMessage.CreationTime.Ticks);
 
             var localMapping = new Dictionary<string, IList<LocalEventKeyInfo>>(StringComparer.OrdinalIgnoreCase);
 
