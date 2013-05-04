@@ -253,16 +253,16 @@ namespace Microsoft.AspNet.SignalR.Messaging
             }
         }
 
-        public MessageStoreResult<ScaleoutMapping> GetMessagesByMappingId(ulong mappingId, long timestamp)
+        public MessageStoreResult<ScaleoutMapping> GetMessagesByMappingId(ulong mappingId)
         {
-            return GetMessagesByMappingId(mappingId, timestamp, connectionId: null, log: false);
+            return GetMessagesByMappingId(mappingId, connectionId: null, log: false);
         }
 
-        public MessageStoreResult<ScaleoutMapping> GetMessagesByMappingId(ulong mappingId, long timestamp, string connectionId, bool log)
+        public MessageStoreResult<ScaleoutMapping> GetMessagesByMappingId(ulong mappingId, string connectionId, bool log)
         {
             if (log)
             {
-                Trace("{0}: GetMessagesByMappingId({1}, {2}) {3} {4}", connectionId, mappingId, timestamp, _minMappingId, _maxMapping == null ? 0 : _maxMapping.Id);
+                Trace("{0}: GetMessagesByMappingId({1}) {2} {3}", connectionId, mappingId, _minMappingId, _maxMapping == null ? 0 : _maxMapping.Id);
             }
 
             var minMessageId = (ulong)Volatile.Read(ref _minMessageId);
@@ -271,7 +271,7 @@ namespace Microsoft.AspNet.SignalR.Messaging
             int idxIntoFragment;
             // look for the fragment containing the start of the data requested by the client
             Fragment thisFragment;
-            if (timestamp != 0 && TryGetFragmentFromMappingId(mappingId, out thisFragment))
+            if (TryGetFragmentFromMappingId(mappingId, out thisFragment))
             {
                 if (thisFragment.TrySearch(mappingId, out idxIntoFragment))
                 {
@@ -308,18 +308,20 @@ namespace Microsoft.AspNet.SignalR.Messaging
                 return GetAllMessages(minMessageId);
             }
 
-            // We have a message id that is older than the max id we have so get all messages
-            if (_maxMapping != null && _maxMapping.CreationTime.Ticks > timestamp)
-            {
-                if (log)
-                {
-                    Trace("{0}: We have a message id that is older than the max id we have so get all messages. {1} > {2}", connectionId, _maxMapping.CreationTime.Ticks, timestamp);
+            //if (_maxMapping != null)
+            //{
+            //    int delta = mappingId - _maxMapping.Id;
 
-                    Trace("{0}: GetAllMessages()", connectionId);
-                }
+            //    if (delta > 10000)
+            //    {
+            //        if (log)
+            //        {
+            //            Trace("{0}: GetAllMessages()", connectionId);
+            //        }
 
-                return GetAllMessages(minMessageId);
-            }
+            //        return GetAllMessages(minMessageId);
+            //    }
+            //}
 
             return new MessageStoreResult<ScaleoutMapping>(0, _emptyArraySegment, hasMoreData: false);
         }

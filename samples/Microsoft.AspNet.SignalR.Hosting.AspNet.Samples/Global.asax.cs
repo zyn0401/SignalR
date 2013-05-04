@@ -12,7 +12,7 @@ namespace Microsoft.AspNet.SignalR.Samples
         {
             SignalRConfig.ConfigureSignalR(GlobalHost.DependencyResolver, GlobalHost.HubPipeline);
             RouteConfig.RegisterRoutes(RouteTable.Routes);
-            BackgroundThread.Start();
+            // BackgroundThread.Start();
         }
 
         protected void Application_AuthenticateRequest(object sender, EventArgs e)
