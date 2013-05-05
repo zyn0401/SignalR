@@ -41,7 +41,7 @@ namespace Microsoft.AspNet.SignalR.Messaging
                 {
                     ScaleoutMapping maxMapping = streams[i].MaxMapping;
 
-                    ulong id = 0;
+                    ulong id = UInt64.MaxValue;
                     string key = i.ToString(CultureInfo.InvariantCulture);
 
                     if (maxMapping != null)

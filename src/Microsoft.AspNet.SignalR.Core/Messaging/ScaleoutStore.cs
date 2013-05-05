@@ -296,7 +296,7 @@ namespace Microsoft.AspNet.SignalR.Messaging
 
             // If we're expired or we're at the first mapping or we're lower than the 
             // min then get everything
-            if (expiredMappingId || mappingId <= _minMappingId)
+            if (expiredMappingId || mappingId < _minMappingId || mappingId == UInt64.MaxValue)
             {
                 if (log)
                 {
@@ -307,21 +307,6 @@ namespace Microsoft.AspNet.SignalR.Messaging
 
                 return GetAllMessages(minMessageId);
             }
-
-            //if (_maxMapping != null)
-            //{
-            //    int delta = mappingId - _maxMapping.Id;
-
-            //    if (delta > 10000)
-            //    {
-            //        if (log)
-            //        {
-            //            Trace("{0}: GetAllMessages()", connectionId);
-            //        }
-
-            //        return GetAllMessages(minMessageId);
-            //    }
-            //}
 
             return new MessageStoreResult<ScaleoutMapping>(0, _emptyArraySegment, hasMoreData: false);
         }
