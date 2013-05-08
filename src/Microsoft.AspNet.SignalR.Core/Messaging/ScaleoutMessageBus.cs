@@ -171,13 +171,18 @@ namespace Microsoft.AspNet.SignalR.Messaging
         {
             Counters.ScaleoutMessageBusMessagesReceivedPerSec.IncrementBy(scaleoutMessage.Messages.Count);
 
-            _trace.TraceInformation("OnReceived({0}, {1}, {2})", streamIndex, id, scaleoutMessage.Messages.Count);
+            // _trace.TraceInformation("OnReceived({0}, {1}, {2})", streamIndex, id, scaleoutMessage.Messages.Count);
 
             var localMapping = new Dictionary<string, IList<LocalEventKeyInfo>>(StringComparer.OrdinalIgnoreCase);
+
+            // Get the stream for this payload
+            ScaleoutMappingStore store = StreamManager.Streams[streamIndex];
+
 
             for (var i = 0; i < scaleoutMessage.Messages.Count; ++i)
             {
                 Message message = scaleoutMessage.Messages[i];
+                message.MappingId = id;
 
                 // Remember where this message came from
                 message.MappingId = id;
@@ -193,11 +198,16 @@ namespace Microsoft.AspNet.SignalR.Messaging
                 ulong localId = Save(message);
                 MessageStore<Message> messageStore = Topics[message.Key].Store;
 
-                keyInfo.Add(new LocalEventKeyInfo(localId, messageStore));
-            }
+                var info = new LocalEventKeyInfo(localId, messageStore);
+                keyInfo.Add(info);
 
-            // Get the stream for this payload
-            ScaleoutMappingStore store = StreamManager.Streams[streamIndex];
+                string value = message.GetString();
+
+                if (!value.Contains("ServerCommandType"))
+                {
+                    store.Trace("OnReceived({0}, {1}, {2})", localId, id, value);
+                }
+            }
 
             // Publish only after we've setup the mapping fully
             store.Add(id, scaleoutMessage, localMapping);

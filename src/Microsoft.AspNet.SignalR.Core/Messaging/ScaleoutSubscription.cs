@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNet.SignalR.Infrastructure;
 
@@ -183,7 +184,7 @@ namespace Microsoft.AspNet.SignalR.Messaging
                             LocalEventKeyInfo info = infos[j];
 
                             MessageStoreResult<Message> storeResult = info.MessageStore.GetMessages(info.Id, 1);
-
+                            
                             if (storeResult.Messages.Count > 0)
                             {
                                 // TODO: Figure out what to do when we have multiple event keys per mapping
@@ -208,10 +209,24 @@ namespace Microsoft.AspNet.SignalR.Messaging
                                     // If we do nothing then we'll end up querying old cursor ids until
                                     // we eventually find a message id that matches this stream index.
                                 }
+
+                                var mappingId = storeResult.Messages.Array[storeResult.Messages.Offset].MappingId;
+
+                                if (mappingId > mapping.Id)
+                                {
+                                    return mappingId;
+                                }
+
+                                //if (EventKeys.Count > 1)
+                                //{
+                                //    _streams[streamIndex].Trace("{0}: ExtractMessages({1}, {2}, {3}, {4}, {5})", Identity, info.Id, mapping.Id, storeResult.Messages.Array[storeResult.Messages.Offset].GetString(), info.GetHashCode(), info.MessageStore.GetHashCode());
+                                //}
                             }
                         }
                     }
                 }
+
+                return mapping.Id;
             }
 
             return mapping.Id;

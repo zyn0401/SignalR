@@ -35,5 +35,7 @@ namespace Microsoft.AspNet.SignalR.Messaging
                 _maxQueueLength = value;
             }
         }
+
+        public string InstanceName { get; set; }
     }
 }
