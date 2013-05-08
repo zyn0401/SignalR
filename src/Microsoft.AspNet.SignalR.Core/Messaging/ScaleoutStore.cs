@@ -266,7 +266,6 @@ namespace Microsoft.AspNet.SignalR.Messaging
             }
 
             var minMessageId = (ulong)Volatile.Read(ref _minMessageId);
-            bool expiredMappingId = false;
 
             int idxIntoFragment;
             // look for the fragment containing the start of the data requested by the client
@@ -307,12 +306,10 @@ namespace Microsoft.AspNet.SignalR.Messaging
 
             // If we're expired or we're at the first mapping or we're lower than the 
             // min then get everything
-            if (expiredMappingId || mappingId < _minMappingId || mappingId == UInt64.MaxValue)
+            if (mappingId < _minMappingId || mappingId == UInt64.MaxValue)
             {
                 if (log)
                 {
-                    Trace("{0}: expiredMappingId = {1} || Less than the min?: {2} <= {3} = {4}", connectionId, expiredMappingId, mappingId, _minMappingId, mappingId <= _minMappingId);
-
                     Trace("{0}: GetAllMessages()", connectionId);
                 }
 

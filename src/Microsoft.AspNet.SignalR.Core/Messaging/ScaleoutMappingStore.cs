@@ -49,6 +49,11 @@ namespace Microsoft.AspNet.SignalR.Messaging
             return new ScaleoutStoreEnumerator(_store, result, connectionId, log);
         }
 
+        public void Trace(string value, params object[] args)
+        {
+            _store.Trace(value, args);
+        }
+
         private struct ScaleoutStoreEnumerator : IEnumerator<ScaleoutMapping>, IEnumerator
         {
             private readonly WeakReference _storeReference;
