@@ -273,7 +273,12 @@ namespace Microsoft.AspNet.SignalR.Messaging
             Fragment thisFragment;
             if (TryGetFragmentFromMappingId(mappingId, out thisFragment))
             {
-                if (thisFragment.TrySearch(mappingId, out idxIntoFragment))
+                int lastSearchIndex;
+                ulong lastSearchId;
+                if (thisFragment.TrySearch(mappingId,
+                                           out idxIntoFragment,
+                                           out lastSearchIndex,
+                                           out lastSearchId))
                 {
                     // Skip the first message
                     idxIntoFragment++;
@@ -283,14 +288,20 @@ namespace Microsoft.AspNet.SignalR.Messaging
                 }
                 else
                 {
-                    if (log)
+                    if (mappingId > lastSearchId)
                     {
-                        Trace("{0}: TrySearch({1}) failed {2} {3}", connectionId, mappingId, thisFragment.MinValue, thisFragment.MaxValue);
+                        lastSearchIndex++;
                     }
 
-                    // We assume that if you fall between the range but we can't find a cursor
-                    // then we've been reset
-                    expiredMappingId = true;
+                    var segment = new ArraySegment<ScaleoutMapping>(thisFragment.Data,
+                                                                    lastSearchIndex,
+                                                                    thisFragment.Length - lastSearchIndex);
+
+                    var firstMessageIdInThisFragment = GetMessageId(thisFragment.FragmentNum, offset: (uint)lastSearchIndex);
+
+                    return new MessageStoreResult<ScaleoutMapping>(firstMessageIdInThisFragment,
+                                                                   segment,
+                                                                   hasMoreData: true);
                 }
             }
 
@@ -432,16 +443,23 @@ namespace Microsoft.AspNet.SignalR.Messaging
                 return id >= MinValue && id <= MaxValue;
             }
 
-            public bool TrySearch(ulong id, out int index)
+            public bool TrySearch(ulong id, out int index, out int lastSearchIndex, out ulong lastSearchId)
             {
-                int low = 0;
-                int high = Length;
+                lastSearchIndex = 0;
+                lastSearchId = id;
+
+                var low = 0;
+                var high = Length;
+
 
                 while (low <= high)
                 {
                     int mid = (low + high) / 2;
 
                     ScaleoutMapping mapping = Data[mid];
+
+                    lastSearchIndex = mid;
+                    lastSearchId = mapping.Id;
 
                     if (id < mapping.Id)
                     {
