@@ -115,6 +115,11 @@ namespace Microsoft.AspNet.SignalR.Messaging
 
                     cursor.Id = nextCursor.Value;
                 }
+
+                if (EventKeys.Count > 1)
+                {
+                    _streams[i].Trace("{0}: C[{1}]= {2}", Identity, i, _cursors[i].Id);
+                }
             }
         }
 
@@ -184,7 +189,7 @@ namespace Microsoft.AspNet.SignalR.Messaging
                             LocalEventKeyInfo info = infos[j];
 
                             MessageStoreResult<Message> storeResult = info.MessageStore.GetMessages(info.Id, 1);
-                            
+
                             if (storeResult.Messages.Count > 0)
                             {
                                 // TODO: Figure out what to do when we have multiple event keys per mapping
@@ -210,17 +215,23 @@ namespace Microsoft.AspNet.SignalR.Messaging
                                     // we eventually find a message id that matches this stream index.
                                 }
 
-                                var mappingId = storeResult.Messages.Array[storeResult.Messages.Offset].MappingId;
+                                Message message = storeResult.Messages.Array[storeResult.Messages.Offset];
+                                var mappingId = message.MappingId;
 
-                                if (mappingId > mapping.Id)
+                                if (EventKeys.Count > 1)
                                 {
-                                    return mappingId;
+                                    _streams[streamIndex].Trace("{0}: ExtractMessages({1}, {2}, {3})", Identity, mapping.Id, message.MappingId, message.GetString());
                                 }
 
-                                //if (EventKeys.Count > 1)
-                                //{
-                                //    _streams[streamIndex].Trace("{0}: ExtractMessages({1}, {2}, {3}, {4}, {5})", Identity, info.Id, mapping.Id, storeResult.Messages.Array[storeResult.Messages.Offset].GetString(), info.GetHashCode(), info.MessageStore.GetHashCode());
-                                //}
+                                if (message.MappingId > mapping.Id)
+                                {
+                                    if (EventKeys.Count > 1)
+                                    {
+                                        _streams[streamIndex].Trace("{0}: The message's mapping id is greater than the mapping id.", Identity);
+                                    }
+
+                                    return mappingId;
+                                }
                             }
                         }
                     }
