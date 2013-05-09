@@ -14,7 +14,7 @@ namespace Microsoft.AspNet.SignalR.Stress.Hubs
 
         public Task Send(int number)
         {
-            return Clients.All.send(number, Context.ConnectionId, Context.Headers["X-Server-Name"]);
+            return Clients.All.send(number, Context.ConnectionId);
         }
     }
 }

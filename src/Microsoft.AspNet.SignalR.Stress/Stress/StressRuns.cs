@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.md in the project root for license information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -247,8 +248,11 @@ namespace Microsoft.AspNet.SignalR.Stress
             return host;
         }
 
-        public static void Scaleout(int nodes, int clients)
+        public static void Scaleout(int nodes, int clients, int streams)
         {
+            var listener = new CircularTraceListener(1000);
+            Trace.Listeners.Add(listener);
+
             var hosts = new MemoryHost[nodes];
             var random = new Random();
             var eventBus = new EventBus();
@@ -264,8 +268,13 @@ namespace Microsoft.AspNet.SignalR.Stress
                     };
 
                     var delay = i % 2 == 0 ? TimeSpan.Zero : TimeSpan.FromSeconds(1);
-                    var bus = new DelayedMessageBus(host.InstanceName, eventBus, config.Resolver, delay);
+                    var bus = new DelayedMessageBus(host.InstanceName, streams, eventBus, config.Resolver, delay);
                     config.Resolver.Register(typeof(IMessageBus), () => bus);
+
+                    var configuration = config.Resolver.Resolve<IConfigurationManager>();
+                    configuration.KeepAlive = null;
+                    configuration.ConnectionTimeout = TimeSpan.FromSeconds(10);
+                    configuration.DefaultMessageBufferSize = 50;
 
                     app.MapHubs(config);
                 });
@@ -288,36 +297,41 @@ namespace Microsoft.AspNet.SignalR.Stress
         {
             var connection = new Client.Hubs.HubConnection("http://foo");
             var proxy = connection.CreateHubProxy("EchoHub");
-            connection.TraceLevel = Client.TraceLevels.Messages;
-            var dict = new Dictionary<string, int>();
+            connection.TraceLevel = Client.TraceLevels.All;
+            var dict = new Dictionary<string, List<int>>();
 
-            proxy.On<int, string, string>("send", (next, connectionId, serverName) =>
+            proxy.On<int, string>("send", (next, connectionId) =>
             {
                 if (wh.IsSet)
                 {
                     return;
                 }
 
-                int value;
-                if (dict.TryGetValue(connectionId, out value))
+                List<int> values;
+                if (dict.TryGetValue(connectionId, out values))
                 {
-                    if (value + 1 != next)
+                    if (values.Contains(next))
                     {
-                        Console.WriteLine("{0}: Expected {1} and got {2} from {3}", connection.ConnectionId, value + 1, next, connectionId);
+                        Trace.WriteLine(String.Format("{0}: Dupes! => {1}, {2}", connection.ConnectionId, next, connectionId));
+                        Trace.Flush();
                         wh.Set();
                         return;
                     }
                 }
+                else
+                {
+                    values = new List<int>();
+                    dict[connectionId] = values;
+                }
 
-                dict[connectionId] = next;
-
+                values.Add(next);
                 if (connectionId == connection.ConnectionId)
                 {
                     proxy.Invoke("send", next + 1).Wait();
                 }
             });
 
-            connection.Start(new Client.Transports.LongPollingTransport(client)).Wait();
+            connection.Start(new Client.Transports.ServerSentEventsTransport(client)).Wait();
 
             proxy.Invoke("send", 0).Wait();
         }
@@ -552,6 +566,9 @@ namespace Microsoft.AspNet.SignalR.Stress
             public Task<Client.Http.IResponse> Get(string url, Action<Client.Http.IRequest> prepareRequest)
             {
                 int index = _random.Next(0, _servers.Length);
+
+                Trace.WriteLine(String.Format("{0}: GET {1}", index, new Uri(url).LocalPath));
+
                 _counter = (_counter + 1) % _servers.Length;
                 return _servers[index].Get(url, prepareRequest);
             }
@@ -559,6 +576,9 @@ namespace Microsoft.AspNet.SignalR.Stress
             public Task<Client.Http.IResponse> Post(string url, Action<Client.Http.IRequest> prepareRequest, IDictionary<string, string> postData)
             {
                 int index = _random.Next(0, _servers.Length);
+
+                Trace.WriteLine(String.Format("{0}: POST {1}", index, new Uri(url).LocalPath));
+
                 _counter = (_counter + 1) % _servers.Length;
                 return _servers[index].Post(url, prepareRequest, postData);
             }
@@ -601,11 +621,13 @@ namespace Microsoft.AspNet.SignalR.Stress
             private readonly EventBus _bus;
             private readonly string _serverName;
             private TaskQueue _queue = new TaskQueue();
+            private readonly int _streamCount;
 
-            public DelayedMessageBus(string serverName, EventBus bus, IDependencyResolver resolver, TimeSpan delay)
-                : base(resolver, new ScaleoutConfiguration())
+            public DelayedMessageBus(string serverName, int streamCount, EventBus bus, IDependencyResolver resolver, TimeSpan delay)
+                : base(resolver, new ScaleoutConfiguration() { InstanceName = serverName })
             {
                 _serverName = serverName;
+                _streamCount = streamCount;
                 _bus = bus;
                 _delay = delay;
 
@@ -619,32 +641,169 @@ namespace Microsoft.AspNet.SignalR.Stress
                     e);
                 };
 
-                Open(0);
+                for (int i = 0; i < StreamCount; i++)
+                {
+                    Open(i);
+                }
             }
 
-            protected override Task Send(IList<Message> messages)
+            protected override int StreamCount
             {
-                _bus.Publish(0, new ScaleoutMessage(messages));
+                get
+                {
+                    return _streamCount;
+                }
+            }
+
+            protected override Task Send(int streamIndex, IList<Message> messages)
+            {
+                _bus.Publish(streamIndex, new ScaleoutMessage(messages));
 
                 return TaskAsyncHelper.Empty;
             }
 
             protected override void OnReceived(int streamIndex, ulong id, ScaleoutMessage message)
             {
-                string value = message.Messages[0].GetString();
-
-                if (!value.Contains("ServerCommandType"))
+                if (_delay != TimeSpan.Zero)
                 {
-                    if (_delay != TimeSpan.Zero)
-                    {
-                        Thread.Sleep(_delay);
-                    }
-
-                    Console.WriteLine("{0}: OnReceived({1}, {2}, {3})", _serverName, streamIndex, id, value);
+                    Thread.Sleep(_delay);
                 }
 
                 base.OnReceived(streamIndex, id, message);
             }
+        }
+
+        public class CircularTraceListener : TraceListener
+        {
+            private readonly MessageStore<TraceMessage> _store;
+
+            public CircularTraceListener(int size)
+            {
+                _store = new MessageStore<TraceMessage>((uint)size);
+            }
+
+            public override void Write(string message)
+            {
+                _store.Add(new TraceMessage(message));
+            }
+
+            public override void WriteLine(string message)
+            {
+                _store.Add(new TraceMessage(message) { HasNewLine = true });
+            }
+
+            public override void Flush()
+            {
+                var e = new StoreEnumerator<TraceMessage>(_store);
+
+                var path = "log_" + Guid.NewGuid().ToString().Substring(0, 4) + ".log";
+                using (var sw = new StreamWriter(path))
+                {
+                    while (e.MoveNext())
+                    {
+                        if (e.Current.HasNewLine)
+                        {
+                            sw.WriteLine(e.Current.Message);
+                        }
+                        else
+                        {
+                            sw.Write(e.Current.Message);
+                        }
+                    }
+                }
+                Console.WriteLine("File {0} written.", path);
+            }
+
+            private struct StoreEnumerator<T> : IEnumerator<T>, IEnumerator where T : class
+            {
+                private readonly WeakReference _storeReference;
+                private MessageStoreResult<T> _result;
+                private int _offset;
+                private int _length;
+                private ulong _nextId;
+
+                public StoreEnumerator(MessageStore<T> store)
+                    : this()
+                {
+                    _storeReference = new WeakReference(store);
+                    var result = store.GetMessages(0, 100);
+                    Initialize(result);
+                }
+
+                public T Current
+                {
+                    get
+                    {
+                        return _result.Messages.Array[_offset];
+                    }
+                }
+
+                public void Dispose()
+                {
+
+                }
+
+                object IEnumerator.Current
+                {
+                    get { return Current; }
+                }
+
+                public bool MoveNext()
+                {
+                    _offset++;
+
+                    if (_offset < _length)
+                    {
+                        return true;
+                    }
+
+                    if (!_result.HasMoreData)
+                    {
+                        return false;
+                    }
+
+                    // If the store falls out of scope
+                    var store = (MessageStore<T>)_storeReference.Target;
+
+                    if (store == null)
+                    {
+                        return false;
+                    }
+
+                    // Get the next result
+                    MessageStoreResult<T> result = store.GetMessages(_nextId, 100);
+                    Initialize(result);
+
+                    _offset++;
+
+                    return _offset < _length;
+                }
+
+                public void Reset()
+                {
+                    throw new NotSupportedException();
+                }
+
+                private void Initialize(MessageStoreResult<T> result)
+                {
+                    _result = result;
+                    _offset = _result.Messages.Offset - 1;
+                    _length = _result.Messages.Offset + _result.Messages.Count;
+                    _nextId = _result.FirstMessageId + (ulong)_result.Messages.Count;
+                }
+            }
+
+        }
+
+        public class TraceMessage
+        {
+            public TraceMessage(string message)
+            {
+                Message = message;
+            }
+
+            public string Message { get; private set; }
+            public bool HasNewLine { get; set; }
         }
     }
 }
