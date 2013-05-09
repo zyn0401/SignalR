@@ -215,22 +215,17 @@ namespace Microsoft.AspNet.SignalR.Messaging
                                     // we eventually find a message id that matches this stream index.
                                 }
 
-                                Message message = storeResult.Messages.Array[storeResult.Messages.Offset];
-                                var mappingId = message.MappingId;
-
                                 if (EventKeys.Count > 1)
                                 {
                                     _streams[streamIndex].Trace("{0}: ExtractMessages({1}, {2}, {3})", Identity, mapping.Id, message.MappingId, message.GetString());
                                 }
 
-                                if (message.MappingId > mapping.Id)
+                                if (message.MappingId != mapping.Id)
                                 {
                                     if (EventKeys.Count > 1)
                                     {
                                         _streams[streamIndex].Trace("{0}: The message's mapping id is greater than the mapping id.", Identity);
                                     }
-
-                                    return mappingId;
                                 }
                             }
                         }
@@ -239,8 +234,6 @@ namespace Microsoft.AspNet.SignalR.Messaging
 
                 return mapping.Id;
             }
-
-            return mapping.Id;
         }
 
         private class CachedStreamEnumerator
