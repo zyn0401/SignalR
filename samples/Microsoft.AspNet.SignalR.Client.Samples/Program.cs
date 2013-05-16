@@ -18,9 +18,9 @@ namespace Microsoft.AspNet.SignalR.Client.Samples
 
             // RunDemoHub(hubConnection);
 
-            // RunStreamingSample();
+            RunStreamingSample();
 
-            RunStatusHub();
+            //RunStatusHub();
 
             Console.ReadKey();
         }
