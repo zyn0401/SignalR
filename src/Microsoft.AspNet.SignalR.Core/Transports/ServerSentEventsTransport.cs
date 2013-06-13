@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.md in the project root for license information.
 
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNet.SignalR.Hosting;
 using Microsoft.AspNet.SignalR.Json;
@@ -26,12 +27,31 @@ namespace Microsoft.AspNet.SignalR.Transports
 
         public override Task Send(PersistentResponse response)
         {
+            if (response == null)
+            {
+                throw new ArgumentNullException("response");
+            }
+
             OnSendingResponse(response);
 
             var context = new SendContext(this, response);
 
-            // Ensure delegate continues to use the C# Compiler static delegate caching optimization.
-            return EnqueueOperation(state => PerformSend(state), context);
+            try
+            {
+                // Ensure delegate continues to use the C# Compiler static delegate caching optimization.
+                return EnqueueOperation(state => PerformSend(state), context);
+            }
+            finally
+            {
+                // #2128
+                // Force Silverlight and portable clients to register the init message.
+                // Perhaps we should do this only for clients with a portable client user-agent.
+                // Then we could send the keep-alive after all Sends.
+                if (response.Initializing)
+                {
+                    KeepAlive();
+                }
+            }
         }
 
         protected internal override Task InitializeResponse(ITransportConnection connection)
