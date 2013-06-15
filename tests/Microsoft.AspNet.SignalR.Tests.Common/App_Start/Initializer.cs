@@ -114,7 +114,7 @@ namespace Microsoft.AspNet.SignalR.Tests.Common
             // This subpipeline is protected by basic auth
             app.MapPath("/basicauth", subApp =>
             {
-                subApp.UseBasicAuthentication(new BasicAuthenticationProvider());
+                //subApp.UseBasicAuthentication(new BasicAuthenticationProvider());
 
                 var subConfig = new ConnectionConfiguration
                 {

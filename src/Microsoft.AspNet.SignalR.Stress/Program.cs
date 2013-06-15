@@ -15,7 +15,7 @@ namespace Microsoft.AspNet.SignalR.Stress
     {   
         static void Main(string[] args)
         {
-            IRun run = CreateRun();
+            /*IRun run = CreateRun();
 
             long memory = 0;
 
@@ -35,7 +35,9 @@ namespace Microsoft.AspNet.SignalR.Stress
             
             memory = GC.GetTotalMemory(forceFullCollection: true);
 
-            Console.WriteLine("After GC and dispose {0}", Utility.FormatBytes(memory));
+            Console.WriteLine("After GC and dispose {0}", Utility.FormatBytes(memory));*/
+            var hub = new SimpleEchoHub();
+            StressRuns.Scaleout(1, 1);
         }
 
         private static StressArguments ParseArguments()

@@ -263,9 +263,9 @@ namespace Microsoft.AspNet.SignalR.Stress
                         Resolver = new DefaultDependencyResolver()
                     };
 
-                    var delay = i % 2 == 0 ? TimeSpan.Zero : TimeSpan.FromSeconds(1);
-                    var bus = new DelayedMessageBus(host.InstanceName, eventBus, config.Resolver, delay);
-                    config.Resolver.Register(typeof(IMessageBus), () => bus);
+                    //var delay = i % 2 == 0 ? TimeSpan.Zero : TimeSpan.FromSeconds(1);
+                    //var bus = new DelayedMessageBus(host.InstanceName, eventBus, config.Resolver, delay);
+                    //config.Resolver.Register(typeof(IMessageBus), () => bus);
 
                     app.MapHubs(config);
                 });
@@ -273,7 +273,7 @@ namespace Microsoft.AspNet.SignalR.Stress
                 hosts[i] = host;
             }
 
-            var client = new LoadBalancer(hosts);
+            var client = hosts[0];
             var wh = new ManualResetEventSlim();
 
             for (int i = 0; i < clients; i++)
@@ -287,11 +287,12 @@ namespace Microsoft.AspNet.SignalR.Stress
         private static void RunLoop(IHttpClient client, ManualResetEventSlim wh)
         {
             var connection = new Client.Hubs.HubConnection("http://foo");
-            var proxy = connection.CreateHubProxy("EchoHub");
+            var proxy = connection.CreateHubProxy("SimpleEchoHub");
+            connection.TraceWriter = Console.Out;
             connection.TraceLevel = Client.TraceLevels.Messages;
             var dict = new Dictionary<string, int>();
 
-            proxy.On<int, string, string>("send", (next, connectionId, serverName) =>
+            proxy.On<int, string>("send", (next, connectionId) =>
             {
                 if (wh.IsSet)
                 {

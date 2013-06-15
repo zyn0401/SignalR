@@ -104,7 +104,7 @@ namespace Microsoft.AspNet.SignalR.Client.Transports
                               .Then(response => response.ReadAsString())
                               .Then(raw =>
                               {
-                                  connection.Trace(TraceLevels.Messages, "OnMessage({0})", raw);
+                                  // connection.Trace(TraceLevels.Messages, "OnMessage({0})", raw);
 
                                   if (!String.IsNullOrEmpty(raw))
                                   {
