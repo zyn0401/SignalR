@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNet.SignalR.Client.Hubs;
+using Microsoft.AspNet.SignalR.Client.Transports;
 
 namespace Microsoft.AspNet.SignalR.Client.Samples
 {
@@ -9,9 +10,45 @@ namespace Microsoft.AspNet.SignalR.Client.Samples
     {
         static void Main(string[] args)
         {
-            RunRawConnection();
+            //RunRawConnection();
+            Task[] tasks = new Task[20];
+
+            for (int i = 0; i < 20; i++)
+            {
+                tasks[i] = Task.Factory.StartNew(() => { AsyncEcho(); });
+            }
+
+            Task.WaitAll(tasks);
 
             Console.ReadKey();
+        }
+
+        private static void AsyncEcho()
+        {
+            ManualResetEvent mre = new ManualResetEvent(false);
+
+            HubConnection connection = new HubConnection("http://localhost:40476/");
+            IHubProxy hubProxy = connection.CreateHubProxy("concurrentcallshub");
+
+            hubProxy.On<string>(
+                "AsyncEcho",
+                (str) =>
+                {
+                    mre.Set();
+                });
+
+            connection.Start(new WebSocketTransport()).Wait();
+
+            Console.WriteLine("Successfully connected ConnectionId:{0}", connection.ConnectionId);
+            
+            hubProxy.Invoke("AsyncEcho", connection.ConnectionId);
+
+            if (!mre.WaitOne(TimeSpan.FromSeconds(120)))
+            {
+                Console.WriteLine("The mre was not set. It should have been set when the first AsyncEcho arrived");
+            }
+
+            connection.Stop();
         }
 
         private static void RunStatusHub()

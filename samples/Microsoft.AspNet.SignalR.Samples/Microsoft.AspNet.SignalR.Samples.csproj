@@ -280,6 +280,7 @@
     <Compile Include="Hubs\Counting\Default.aspx.designer.cs">
       <DependentUpon>Default.aspx</DependentUpon>
     </Compile>
+    <Compile Include="Hubs\DemoHub\ConcurrentCallsHub.cs" />
     <Compile Include="Hubs\DemoHub\Default.aspx.cs">
       <DependentUpon>Default.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>

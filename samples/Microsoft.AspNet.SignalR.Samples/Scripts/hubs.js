@@ -117,6 +117,37 @@
              }
         };
 
+        proxies.concurrentCallsHub = this.createHubProxy('concurrentCallsHub'); 
+        proxies.concurrentCallsHub.client = { };
+        proxies.concurrentCallsHub.server = {
+            asyncEcho: function (str) {
+            /// <summary>Calls the AsyncEcho method on the server-side ConcurrentCallsHub hub.&#10;Returns a jQuery.Deferred() promise.</summary>
+            /// <param name=\"str\" type=\"String\">Server side type is System.String</param>
+                return proxies.concurrentCallsHub.invoke.apply(proxies.concurrentCallsHub, $.merge(["AsyncEcho"], $.makeArray(arguments)));
+             },
+
+            echoAll: function (str, c) {
+            /// <summary>Calls the EchoAll method on the server-side ConcurrentCallsHub hub.&#10;Returns a jQuery.Deferred() promise.</summary>
+            /// <param name=\"str\" type=\"String\">Server side type is System.String</param>
+            /// <param name=\"c\" type=\"Object\">Server side type is Microsoft.AspNet.SignalR.StressServer.Hubs.DataClass</param>
+                return proxies.concurrentCallsHub.invoke.apply(proxies.concurrentCallsHub, $.merge(["EchoAll"], $.makeArray(arguments)));
+             },
+
+            echoCaller: function (str, c) {
+            /// <summary>Calls the EchoCaller method on the server-side ConcurrentCallsHub hub.&#10;Returns a jQuery.Deferred() promise.</summary>
+            /// <param name=\"str\" type=\"String\">Server side type is System.String</param>
+            /// <param name=\"c\" type=\"Object\">Server side type is Microsoft.AspNet.SignalR.StressServer.Hubs.DataClass</param>
+                return proxies.concurrentCallsHub.invoke.apply(proxies.concurrentCallsHub, $.merge(["EchoCaller"], $.makeArray(arguments)));
+             },
+
+            echoMessage: function (str, c) {
+            /// <summary>Calls the EchoMessage method on the server-side ConcurrentCallsHub hub.&#10;Returns a jQuery.Deferred() promise.</summary>
+            /// <param name=\"str\" type=\"String\">Server side type is System.String</param>
+            /// <param name=\"c\" type=\"Object\">Server side type is Microsoft.AspNet.SignalR.StressServer.Hubs.DataClass</param>
+                return proxies.concurrentCallsHub.invoke.apply(proxies.concurrentCallsHub, $.merge(["EchoMessage"], $.makeArray(arguments)));
+             }
+        };
+
         proxies.countingHub = this.createHubProxy('countingHub'); 
         proxies.countingHub.client = { };
         proxies.countingHub.server = {
