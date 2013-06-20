@@ -11,9 +11,9 @@ namespace Microsoft.AspNet.SignalR.Client.Samples
         static void Main(string[] args)
         {
             //RunRawConnection();
-            Task[] tasks = new Task[1];
+            Task[] tasks = new Task[20];
 
-            for (int i = 0; i < 1; i++)
+            for (int i = 0; i < 20; i++)
             {
                 tasks[i] = Task.Factory.StartNew(() => { AsyncEcho(); });
             }
@@ -26,30 +26,32 @@ namespace Microsoft.AspNet.SignalR.Client.Samples
         private static void AsyncEcho()
         {
             //ManualResetEvent mre = new ManualResetEvent(false);
+            while (true)
+            {
+                HubConnection connection = new HubConnection("http://localhost:40476/");
+                connection.TransportConnectTimeout = TimeSpan.FromSeconds(10);
+                IHubProxy hubProxy = connection.CreateHubProxy("concurrentcallshub");
 
-            HubConnection connection = new HubConnection("http://localhost:40476/");
-            connection.TransportConnectTimeout = TimeSpan.FromSeconds(15);
-            IHubProxy hubProxy = connection.CreateHubProxy("concurrentcallshub");
+                hubProxy.On<string>(
+                    "AsyncEcho",
+                    (str) =>
+                    {
+                        hubProxy.Invoke("AsyncEcho", connection.ConnectionId);
+                    });
 
-            hubProxy.On<string>(
-                "AsyncEcho",
-                (str) =>
-                {
-                    hubProxy.Invoke("AsyncEcho", connection.ConnectionId);
-                });
+                connection.Start(new WebSocketTransport()).Wait();
 
-            connection.Start(new WebSocketTransport()).Wait();
+                Console.WriteLine("Successfully connected ConnectionId:{0}", connection.ConnectionId);
 
-            Console.WriteLine("Successfully connected ConnectionId:{0}", connection.ConnectionId);
-            
-            hubProxy.Invoke("AsyncEcho", connection.ConnectionId);
+                hubProxy.Invoke("AsyncEcho", connection.ConnectionId);
 
-            //if (!mre.WaitOne(TimeSpan.FromSeconds(120)))
-            //{
-            //    Console.WriteLine("The mre was not set. It should have been set when the first AsyncEcho arrived");
-            //}
+                //if (!mre.WaitOne(TimeSpan.FromSeconds(120)))
+                //{
+                //    Console.WriteLine("The mre was not set. It should have been set when the first AsyncEcho arrived");
+                //}
 
-            connection.Stop();
+                connection.Stop();
+            }
         }
 
         private static void RunStatusHub()
@@ -57,9 +59,9 @@ namespace Microsoft.AspNet.SignalR.Client.Samples
             var hubConnection = new HubConnection("http://localhost:40476/");
             var proxy = hubConnection.CreateHubProxy("statushub");
 
-            proxy.On<string,string>("joined", (connectionId, date) =>
+            proxy.On<string, string>("joined", (connectionId, date) =>
             {
-                 Console.WriteLine(connectionId + " joined on "+date);   
+                Console.WriteLine(connectionId + " joined on " + date);
             });
 
             Console.Read();
