@@ -11,14 +11,16 @@ namespace Microsoft.AspNet.SignalR.Client.Samples
         static void Main(string[] args)
         {
             //RunRawConnection();
-            Task[] tasks = new Task[20];
+            //Task[] tasks = new Task[20];
 
-            for (int i = 0; i < 20; i++)
-            {
-                tasks[i] = Task.Factory.StartNew(() => { AsyncEcho(); });
-            }
+            //for (int i = 0; i < 20; i++)
+            //{
+            //    tasks[i] = Task.Factory.StartNew(() => { AsyncEcho(); });
+            //}
 
-            Task.WaitAll(tasks);
+            //Task.WaitAll(tasks);
+
+            AsyncEcho();
 
             Console.ReadKey();
         }
@@ -26,7 +28,7 @@ namespace Microsoft.AspNet.SignalR.Client.Samples
         private static void AsyncEcho()
         {
             //ManualResetEvent mre = new ManualResetEvent(false);
-            while (true)
+            for (int i = 0; i < 10; i++)
             {
                 HubConnection connection = new HubConnection("http://localhost:40476/");
                 connection.TransportConnectTimeout = TimeSpan.FromSeconds(10);
@@ -44,6 +46,8 @@ namespace Microsoft.AspNet.SignalR.Client.Samples
                 Console.WriteLine("Successfully connected ConnectionId:{0}", connection.ConnectionId);
 
                 hubProxy.Invoke("AsyncEcho", connection.ConnectionId);
+
+                Thread.Sleep(TimeSpan.FromSeconds(3));
 
                 //if (!mre.WaitOne(TimeSpan.FromSeconds(120)))
                 //{
