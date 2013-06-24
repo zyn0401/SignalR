@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNet.SignalR.Client;
 using Microsoft.AspNet.SignalR.Client.Hubs;
-using Microsoft.AspNet.SignalR.FunctionalTests.Infrastructure;
+using Microsoft.AspNet.SignalR.Tests.Common.Infrastructure;
 using Newtonsoft.Json;
 using Xunit;
 using Xunit.Extensions;
