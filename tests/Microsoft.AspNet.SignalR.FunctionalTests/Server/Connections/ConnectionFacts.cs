@@ -369,7 +369,7 @@ namespace Microsoft.AspNet.SignalR.Client.Tests
                         var config = new ConnectionConfiguration
                         {
                             Resolver = new DefaultDependencyResolver(),
-                            EnableCrossDomain = true
+                            // EnableCrossDomain = true
                         };
 
                         app.MapConnection<MyConnection>("echo", config);

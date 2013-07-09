@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
+using System.Web.Cors;
 using Microsoft.AspNet.SignalR;
 using Microsoft.AspNet.SignalR.Samples;
 using Microsoft.AspNet.SignalR.Tracing;
@@ -10,7 +12,19 @@ namespace Microsoft.AspNet.SelfHost.Samples
     {
         public void Configuration(IAppBuilder app)
         {
-            app.MapConnection<RawConnection>("/raw-connection", new ConnectionConfiguration { EnableCrossDomain = true });
+
+            var policy = new CorsPolicy
+            {
+                AllowAnyHeader = true,
+                AllowAnyMethod = true,
+                SupportsCredentials = true,
+            };
+
+            policy.Origins.Add("http://localhost:8081");
+
+            app.UseCors(policy);
+
+            app.MapConnection<RawConnection>("/raw-connection");
             app.MapHubs();
 
             // Turn tracing on programmatically

@@ -81,7 +81,7 @@ namespace Microsoft.AspNet.SignalR.Tests.Common
             var hubConfig = new HubConfiguration
             {
                 Resolver = resolver,
-                EnableCrossDomain = true,
+                // EnableCrossDomain = true,
                 EnableDetailedErrors = true
             };
 
@@ -94,7 +94,7 @@ namespace Microsoft.AspNet.SignalR.Tests.Common
 
             var crossDomainConfig = new ConnectionConfiguration
             {
-                EnableCrossDomain = true,
+                // EnableCrossDomain = true,
                 Resolver = resolver
             };
 
