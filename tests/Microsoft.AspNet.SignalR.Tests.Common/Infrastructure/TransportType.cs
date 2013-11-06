@@ -7,5 +7,7 @@
         ServerSentEvents,
         ForeverFrame,
         LongPolling,
+
+        fdsffdf,
     }
 }
